@@ -1,5 +1,6 @@
 pyTelegramBotAPI==4.14.0
 google-adk==0.1.0
+google-genai>=0.2.0
 cryptography>=42.0.0
 pyautogui==0.9.54
 opencv-python>=4.9.0.80

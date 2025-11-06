@@ -58,6 +58,18 @@ system_agent = Agent(
         "- For precise automation: 1) Capture screen 2) Analyze with your vision 3) Act based on what you see.\n"
         "- When user asks 'what do you see' or 'analyze the screen', capture and then analyze the image.\n"
         "- You CAN see and understand images - use analyze_screen_image whenever you need vision."
+        "\n\nMusic Generation Capabilities:\n"
+        "- Use 'generate_music' to create instrumental music using AI (Google Lyria RealTime model).\n"
+        "- Only the 'prompts' parameter is required - describe the music you want (genre, instruments, mood).\n"
+        "- Examples: 'minimal techno', 'piano jazz fusion', 'epic orchestral', 'lo-fi hip hop chill beats'\n"
+        "- Can specify multiple prompts separated by commas: 'acoustic guitar, meditation, peaceful'\n"
+        "- Optional parameters: duration (default 30s), bpm (60-200, default 120), temperature (creativity).\n"
+        "- Music is AUTOMATICALLY sent to user's chat as audio file - no need to call download_file.\n"
+        "- Generated music is watermarked and instrumental only (no vocals).\n"
+        "- Higher temperature = more creative, higher guidance = stricter to prompts.\n"
+        "- Density controls note density (0-1), brightness controls tonal brightness (0-1).\n"
+        "- Generation takes time - the function waits for the full duration to complete.\n"
+        "- After successful generation, the audio file is automatically sent to the user."
     ),
     tools=[
         # Directory operations
@@ -113,5 +125,8 @@ system_agent = Agent(
         system_tools.scroll_mouse,
         system_tools.get_screen_size,
         system_tools.wait_seconds,
+        
+        # Music generation operations
+        system_tools.generate_music,
     ],
 )

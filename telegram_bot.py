@@ -377,7 +377,13 @@ def handle_message(message):
                 continue
 
             with open(file_path, 'rb') as f:
-                if caption and len(caption) <= 1024:
+                # Check if it's an audio file to send as audio instead of document
+                if file_path.lower().endswith(('.wav', '.mp3', '.ogg', '.m4a', '.flac')):
+                    if caption and len(caption) <= 1024:
+                        bot.send_audio(chat_id, f, caption=caption)
+                    else:
+                        bot.send_audio(chat_id, f)
+                elif caption and len(caption) <= 1024:
                     bot.send_document(chat_id, f, caption=caption)
                 else:
                     bot.send_document(chat_id, f)

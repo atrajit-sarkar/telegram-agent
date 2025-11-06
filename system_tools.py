@@ -15,6 +15,11 @@ try:
 except ImportError:  # pragma: no cover - optional dependency fallback
     mss = None
 
+try:
+    from google import genai as genai_new  # For Lyria music generation
+except ImportError:
+    genai_new = None  # Will be checked in generate_music function
+
 # Configure Gemini for vision analysis
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if GOOGLE_API_KEY:
@@ -1319,4 +1324,178 @@ def wait_seconds(seconds: int) -> dict:
             "status": "error",
             "message": f"Failed to wait: {str(e)}"
         }
+
+
+def generate_music(
+    prompts: str,
+    duration: int = 30,
+    output_file: str = "generated_music.wav",
+    bpm: int = 120,
+    temperature: float = 1.1,
+    guidance: float = 4.0,
+    density: float = 0.5,
+    brightness: float = 0.5
+) -> dict:
+    """Generate instrumental music using Google's Lyria RealTime model.
+    
+    Args:
+        prompts (str): Description of the music to generate. Can include instruments, genre, mood.
+                      Examples: "minimal techno", "piano jazz fusion", "epic orchestral"
+        duration (int): Duration in seconds to generate music. Default 30 seconds.
+        output_file (str): Output audio file path. Default "generated_music.wav"
+        bpm (int): Beats per minute (60-200). Default 120
+        temperature (float): Creativity (0.0-3.0). Higher = more creative. Default 1.1
+        guidance (float): Prompt adherence (0.0-6.0). Higher = stricter. Default 4.0
+        density (float): Note density (0.0-1.0). Higher = busier music. Default 0.5
+        brightness (float): Tonal brightness (0.0-1.0). Higher = brighter sound. Default 0.5
+        
+    Returns:
+        dict: Contains status, file path, and generation details
+        
+    Example prompts:
+        - "minimal techno with 303 acid bass"
+        - "acoustic guitar fingerstyle meditation"
+        - "epic orchestral with brass section"
+        - "lo-fi hip hop chill beats"
+        - "funk drums with electric bass"
+    """
+    try:
+        import asyncio
+        import wave
+        import struct
+        import warnings
+        
+        if not GOOGLE_API_KEY:
+            return {
+                "status": "error",
+                "message": "GOOGLE_API_KEY not configured. Cannot generate music."
+            }
+        
+        if genai_new is None:
+            return {
+                "status": "error",
+                "message": "google-genai package not installed. Run: pip install google-genai"
+            }
+        
+        # Parse multiple prompts if separated by commas
+        prompt_list = [p.strip() for p in prompts.split(',') if p.strip()]
+        
+        async def generate_music_async():
+            """Async function to generate music using Lyria RealTime."""
+            from google.genai import types
+            
+            audio_chunks = []
+            
+            # Suppress experimental warning for Lyria
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=Warning, message='.*experimental.*')
+                
+                # Initialize client with v1alpha API version (required for Lyria)
+                music_client = genai_new.Client(
+                    api_key=GOOGLE_API_KEY,
+                    http_options={'api_version': 'v1alpha'}
+                )
+            
+                async def receive_audio(session):
+                    """Background task to receive and collect audio chunks."""
+                    try:
+                        async for message in session.receive():
+                            if hasattr(message, 'server_content') and hasattr(message.server_content, 'audio_chunks'):
+                                for audio_chunk in message.server_content.audio_chunks:
+                                    audio_chunks.append(audio_chunk.data)
+                    except Exception:
+                        pass  # Session closed or completed
+                
+                # Connect to Lyria RealTime model
+                async with (
+                    music_client.aio.live.music.connect(model='models/lyria-realtime-exp') as session,
+                    asyncio.TaskGroup() as tg,
+                ):
+                    # Set up background task to receive audio
+                    tg.create_task(receive_audio(session))
+                    
+                    # Set weighted prompts
+                    weighted_prompts = [
+                        types.WeightedPrompt(text=prompt, weight=1.0)
+                        for prompt in prompt_list
+                    ]
+                    await session.set_weighted_prompts(prompts=weighted_prompts)
+                    
+                    # Configure music generation
+                    await session.set_music_generation_config(
+                        config=types.LiveMusicGenerationConfig(
+                            bpm=bpm,
+                            temperature=temperature,
+                            guidance=guidance,
+                            density=density,
+                            brightness=brightness
+                        )
+                    )
+                    
+                    # Start generating music
+                    await session.play()
+                    
+                    # Wait for specified duration
+                    await asyncio.sleep(duration)
+                    
+                    # Stop generation
+                    await session.stop()
+            
+            return audio_chunks
+        
+        # Run async generation - handle existing event loop
+        try:
+            # Try to get the running event loop (if we're already in async context)
+            loop = asyncio.get_running_loop()
+            # If we're in an async context, we need to run in a new thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, generate_music_async())
+                audio_data = future.result()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            audio_data = asyncio.run(generate_music_async())
+        
+        if not audio_data:
+            return {
+                "status": "error",
+                "message": "No audio data received from music generation"
+            }
+        
+        # Save audio to WAV file (16-bit PCM, 48kHz, stereo)
+        with wave.open(output_file, 'wb') as wav_file:
+            wav_file.setnchannels(2)  # Stereo
+            wav_file.setsampwidth(2)  # 16-bit
+            wav_file.setframerate(48000)  # 48kHz
+            
+            # Convert bytes to PCM and write
+            for chunk in audio_data:
+                wav_file.writeframes(chunk)
+        
+        file_size_mb = round(os.path.getsize(output_file) / (1024 * 1024), 2)
+        
+        # Return with file_path so the Telegram bot automatically sends it to user
+        return {
+            "status": "success",
+            "file_path": os.path.abspath(output_file),  # Absolute path for reliable file sending
+            "duration_seconds": duration,
+            "prompts": prompt_list,
+            "bpm": bpm,
+            "size_mb": file_size_mb,
+            "sample_rate": "48kHz",
+            "channels": "stereo",
+            "message": f"🎵 Generated {duration}s of music: '{', '.join(prompt_list)}' at {bpm} BPM ({file_size_mb} MB) - Sending to your chat..."
+        }
+        
+    except ImportError as e:
+        return {
+            "status": "error",
+            "message": f"Missing required package for music generation: {str(e)}. The google-genai package may need to be updated."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to generate music: {str(e)}"
+        }
+
 
