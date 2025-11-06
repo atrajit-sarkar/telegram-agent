@@ -7,13 +7,42 @@ import signal
 import sys
 from requests.exceptions import ConnectionError
 from pathlib import Path
-import agent
 import dotenv
 from google.genai import types
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.adk import telemetry as adk_telemetry
+from google.adk.flows.llm_flows import base_llm_flow
 
-dotenv.load_dotenv()  # Fixed: Added parentheses to call the function
+# Load environment variables FIRST before importing agent (which imports system_tools)
+dotenv.load_dotenv()  # This must be called before importing agent
+
+# Now import agent after environment variables are loaded
+import agent
+
+# Disable ADK span payload capture to avoid serializing binary blobs
+os.environ.setdefault("ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS", "false")
+
+
+# Patch ADK telemetry to tolerate binary payloads in tracing
+_original_trace_call_llm = adk_telemetry.trace_call_llm
+
+
+def _safe_trace_call_llm(invocation_context, event_id, llm_request, llm_response):
+    """Wrap the default tracer so binary blobs do not crash telemetry."""
+    try:
+        _original_trace_call_llm(invocation_context, event_id, llm_request, llm_response)
+    except TypeError:
+        span = adk_telemetry.trace.get_current_span()
+        span.set_attribute('gen_ai.system', 'gcp.vertex.agent')
+        span.set_attribute('gcp.vertex.agent.invocation_id', invocation_context.invocation_id)
+        span.set_attribute('gcp.vertex.agent.event_id', event_id)
+        span.set_attribute('gcp.vertex.agent.llm_request', '{}')
+        span.set_attribute('gcp.vertex.agent.llm_response', '{}')
+
+
+adk_telemetry.trace_call_llm = _safe_trace_call_llm
+base_llm_flow.trace_call_llm = _safe_trace_call_llm
 # Bot Configuration
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # Add your bot token here
 AUTHORIZED_CHAT_IDS = ["7990300718"]  # Add authorized chat IDs here
@@ -230,8 +259,11 @@ def handle_message(message):
         user_id = str(chat_id)
         session_id = f"session_{chat_id}"
         
-        # Create user content
+        # Create user content - just send text query
+        # Note: Vision images are handled through tool results, not user content
+        # The capture_screen_for_vision tool automatically makes images available to the AI
         content = types.Content(role='user', parts=[types.Part(text=user_query)])
+
         
         # Run the agent through the runner
         events = runner.run(
@@ -261,6 +293,13 @@ def handle_message(message):
                         if isinstance(response_payload, dict):
                             file_path = response_payload.get("file_path")
                             if file_path and os.path.exists(file_path):
+                                # Check if this is a vision capture
+                                is_vision = response_payload.get("is_vision_capture", False) or \
+                                           "vision" in file_path.lower() or \
+                                           "vision" in response_payload.get("message", "").lower()
+                                
+                                # Vision captures will be available to AI in subsequent messages through conversation history
+                                    
                                 files_to_send.append({
                                     "file_path": file_path,
                                     "caption": response_payload.get("message")

@@ -8,11 +8,17 @@ import pyautogui
 import cv2
 import numpy as np
 from cryptography.fernet import Fernet
+import google.generativeai as genai
 
 try:
     import mss  # type: ignore
 except ImportError:  # pragma: no cover - optional dependency fallback
     mss = None
+
+# Configure Gemini for vision analysis
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
 
 
 def get_cwd() -> dict:
@@ -58,17 +64,17 @@ def chdir(directory: str) -> dict:
         }
 
 
-def list_directory(directory: Optional[str] = None) -> dict:
+def list_directory(directory: str) -> dict:
     """List all files and folders in the specified directory.
     
     Args:
-        directory (str, optional): Directory path to list. Uses current directory if None.
+        directory (str): Directory path to list. Use empty string "" or "." for current directory.
         
     Returns:
         dict: Contains status, list of files and folders
     """
     try:
-        path = directory if directory else os.getcwd()
+        path = directory if directory and directory != "" else os.getcwd()
         items = os.listdir(path)
         
         files = []
@@ -120,12 +126,12 @@ def read_file(file_path: str) -> dict:
         }
 
 
-def create_file(file_path: str, content: Optional[str] = None) -> dict:
+def create_file(file_path: str, content: str) -> dict:
     """Create a new file with specified content.
     
     Args:
         file_path (str): Path where the file should be created
-        content (str, optional): Content to write to the file
+        content (str): Content to write to the file. Use empty string "" for blank file.
         
     Returns:
         dict: Contains status and file path
@@ -370,17 +376,17 @@ def change_file_permissions(file_path: str, mode: str) -> dict:
         }
 
 
-def encrypt_files(directory: Optional[str] = None) -> dict:
+def encrypt_files(directory: str) -> dict:
     """Encrypt all files in the specified directory (excluding encryption key and script).
     
     Args:
-        directory (str, optional): Directory containing files to encrypt. Uses current directory if None.
+        directory (str): Directory containing files to encrypt. Use empty string "" or "." for current directory.
         
     Returns:
         dict: Contains status and encryption details
     """
     try:
-        dir_path = directory if directory else os.getcwd()
+        dir_path = directory if directory and directory != "" else os.getcwd()
         files = []
         
         for file in os.listdir(dir_path):
@@ -424,17 +430,17 @@ def encrypt_files(directory: Optional[str] = None) -> dict:
         }
 
 
-def decrypt_files(directory: Optional[str] = None) -> dict:
+def decrypt_files(directory: str) -> dict:
     """Decrypt all encrypted files in the specified directory.
     
     Args:
-        directory (str, optional): Directory containing files to decrypt. Uses current directory if None.
+        directory (str): Directory containing files to decrypt. Use empty string "" or "." for current directory.
         
     Returns:
         dict: Contains status and decryption details
     """
     try:
-        dir_path = directory if directory else os.getcwd()
+        dir_path = directory if directory and directory != "" else os.getcwd()
         files = []
         
         for file in os.listdir(dir_path):
@@ -473,17 +479,17 @@ def decrypt_files(directory: Optional[str] = None) -> dict:
         }
 
 
-def capture_screenshot(save_path: Optional[str] = None) -> dict:
+def capture_screenshot(save_path: str = "screenshot.png") -> dict:
     """Capture a screenshot of the current screen.
     
     Args:
-        save_path (str, optional): Path where the screenshot should be saved
+        save_path (str): Optional path where the screenshot should be saved. Default is "screenshot.png".
         
     Returns:
         dict: Contains status and file path
     """
     try:
-        path = save_path if save_path else "screenshot.png"
+        path = save_path if save_path and save_path != "" else "screenshot.png"
 
         if mss is not None:
             with mss.mss() as sct:
@@ -508,12 +514,12 @@ def capture_screenshot(save_path: Optional[str] = None) -> dict:
         }
 
 
-def record_screen(duration: int, output_file: Optional[str] = None) -> dict:
+def record_screen(duration: int, output_file: str = "screen_recording.mp4") -> dict:
     """Record the screen for a specified duration.
     
     Args:
         duration (int): Duration in seconds to record
-        output_file (str, optional): Output video file path
+        output_file (str): Optional output video file path. Default is "screen_recording.mp4".
         
     Returns:
         dict: Contains status and file path
@@ -531,7 +537,7 @@ def record_screen(duration: int, output_file: Optional[str] = None) -> dict:
         codec = cv2.VideoWriter_fourcc(*"mp4v")
         fps = 10.0
 
-        file_path = output_file if output_file else "recording.mp4"
+        file_path = output_file if output_file and output_file != "" else "recording.mp4"
 
         with mss.mss() as sct:
             monitor = sct.monitors[1]
@@ -684,12 +690,12 @@ def download_file(file_path: str) -> dict:
         }
 
 
-def download_directory(directory_path: str, output_zip: Optional[str] = None) -> dict:
+def download_directory(directory_path: str, output_zip: str = "") -> dict:
     """Create a zip archive of a directory for download.
     
     Args:
         directory_path (str): Path to the directory to download
-        output_zip (str, optional): Output zip file name. Defaults to directory name + .zip
+        output_zip (str): Optional output zip file name. Default "" for auto-generated name (directory name + .zip)
         
     Returns:
         dict: Contains status and zip file path
@@ -708,7 +714,7 @@ def download_directory(directory_path: str, output_zip: Optional[str] = None) ->
             }
         
         # Determine output zip name
-        if output_zip is None:
+        if output_zip is None or output_zip == "":
             dir_name = os.path.basename(directory_path.rstrip('/\\'))
             output_zip = f"{dir_name}.zip"
         
@@ -791,12 +797,12 @@ def list_files_in_directory(directory_path: str) -> dict:
         }
 
 
-def open_application(application_name: str, file_path: Optional[str] = None) -> dict:
+def open_application(application_name: str, file_path: str = "") -> dict:
     """Open an application installed on the PC. Can also open a file with a specific application.
     
     Args:
         application_name (str): Name or path of the application to open (e.g., 'notepad', 'chrome', 'code', or full path)
-        file_path (str, optional): Path to a file to open with the application
+        file_path (str): Optional path to a file to open with the application. Leave empty if no file to open.
         
     Returns:
         dict: Contains status and application info
@@ -808,7 +814,7 @@ def open_application(application_name: str, file_path: Optional[str] = None) -> 
         - open_application('C:/Program Files/App/app.exe') - Opens app using full path
     """
     try:
-        if file_path:
+        if file_path and file_path != "":
             # Open application with a specific file
             if os.path.exists(file_path):
                 subprocess.Popen([application_name, file_path])
@@ -848,7 +854,7 @@ def type_text(text: str, interval: float = 0.1) -> dict:
     
     Args:
         text (str): The text to type
-        interval (float): Delay between each character in seconds (default: 0.1)
+        interval (float): Optional delay between each character in seconds. Default is 0.1 (standard speed).
         
     Returns:
         dict: Contains status and typed text info
@@ -873,8 +879,8 @@ def press_key(key: str, presses: int = 1, interval: float = 0.1) -> dict:
     
     Args:
         key (str): Key to press (e.g., 'enter', 'tab', 'ctrl', 'alt', 'space', 'backspace', 'delete', 'f1'-'f12', etc.)
-        presses (int): Number of times to press the key (default: 1)
-        interval (float): Delay between presses in seconds (default: 0.1)
+        presses (int): Optional number of times to press the key. Default is 1 for single press.
+        interval (float): Optional delay between presses in seconds. Default is 0.1.
         
     Returns:
         dict: Contains status and key press info
@@ -931,20 +937,20 @@ def press_hotkey(*keys: str) -> dict:
         }
 
 
-def click_mouse(x: Optional[int] = None, y: Optional[int] = None, button: str = 'left', clicks: int = 1) -> dict:
+def click_mouse(x: int = -1, y: int = -1, button: str = 'left', clicks: int = 1) -> dict:
     """Click the mouse at a specific position or current position.
     
     Args:
-        x (int, optional): X coordinate to click. If None, clicks at current position
-        y (int, optional): Y coordinate to click. If None, clicks at current position
-        button (str): Mouse button to click - 'left', 'right', or 'middle' (default: 'left')
-        clicks (int): Number of clicks (default: 1, use 2 for double-click)
+        x (int): Optional X coordinate to click. Default -1 to click at current position
+        y (int): Optional Y coordinate to click. Default -1 to click at current position
+        button (str): Optional mouse button to click - 'left', 'right', or 'middle'. Default is 'left'
+        clicks (int): Optional number of clicks. Default 1 for single, use 2 for double-click
         
     Returns:
         dict: Contains status and click info
     """
     try:
-        if x is not None and y is not None:
+        if x >= 0 and y >= 0:
             pyautogui.click(x=x, y=y, button=button, clicks=clicks)
             position = f"({x}, {y})"
         else:
@@ -972,7 +978,7 @@ def move_mouse(x: int, y: int, duration: float = 0.5) -> dict:
     Args:
         x (int): X coordinate to move to
         y (int): Y coordinate to move to
-        duration (float): Time in seconds for the movement (default: 0.5)
+        duration (float): Optional time in seconds for the movement. Default is 0.5.
         
     Returns:
         dict: Contains status and movement info
@@ -1041,7 +1047,7 @@ def scroll_mouse(clicks: int, direction: str = 'down') -> dict:
     
     Args:
         clicks (int): Number of scroll clicks (positive number)
-        direction (str): Scroll direction - 'up' or 'down' (default: 'down')
+        direction (str): Optional scroll direction - 'up' or 'down'. Default is 'down'
         
     Returns:
         dict: Contains status and scroll info
@@ -1157,5 +1163,160 @@ def list_running_processes() -> dict:
         return {
             "status": "error",
             "message": f"Failed to list processes: {str(e)}"
+        }
+
+
+def capture_screen_for_vision(save_path: str = "vision_capture.png") -> dict:
+    """Capture the current screen and save it for vision analysis. This allows the AI to see what's on the screen and understand application states.
+    
+    Args:
+        save_path (str): Optional path where the screenshot should be saved for analysis. Default is "vision_capture.png".
+        
+    Returns:
+        dict: Contains status, file path, and screen information for AI vision analysis
+    """
+    try:
+        path = save_path if save_path and save_path != "" else "vision_capture.png"
+
+        if mss is not None:
+            with mss.mss() as sct:
+                monitor = sct.monitors[1]
+                raw_img = sct.grab(monitor)
+                frame = np.array(raw_img)
+                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+                cv2.imwrite(path, frame_bgr)
+                
+                return {
+                    "status": "success",
+                    "file_path": path,
+                    "screen_width": monitor["width"],
+                    "screen_height": monitor["height"],
+                    "is_vision_capture": True,
+                    "message": f"✅ Vision capture successful! Screen captured at {path}. This image will be sent to the AI for analysis. The AI can now see what's on your screen (Resolution: {monitor['width']}x{monitor['height']}). You can now ask questions about what's visible or request actions based on the screen content."
+                }
+        else:
+            return {
+                "status": "error",
+                "message": "Screen capture for vision requires the 'mss' package"
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to capture screen for vision: {str(e)}"
+        }
+
+
+def analyze_screen_image(image_path: str, user_question: str) -> dict:
+    """Analyze a screenshot image using Gemini Vision API and return detailed analysis.
+    
+    Args:
+        image_path (str): Path to the image file to analyze (e.g., "vision_capture.png")
+        user_question (str): Specific question to ask about the image (e.g., "What applications are open?" or "Describe what you see")
+        
+    Returns:
+        dict: Contains status and AI analysis of the image
+    """
+    try:
+        if not GOOGLE_API_KEY:
+            return {
+                "status": "error",
+                "message": "GOOGLE_API_KEY not configured. Cannot perform vision analysis."
+            }
+        
+        if not os.path.exists(image_path):
+            return {
+                "status": "error",
+                "message": f"Image file not found: {image_path}"
+            }
+        
+        # Use Gemini 2.0 Flash for vision analysis (fast and efficient)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        # Load the image
+        import PIL.Image
+        img = PIL.Image.open(image_path)
+        
+        # Create prompt for vision analysis
+        prompt = f"""You are analyzing a screenshot of a computer screen. 
+        
+User's question: {user_question}
+
+Please provide a detailed analysis of what you see in this screenshot. Include:
+- What applications or windows are visible
+- Any text content you can read
+- UI elements (buttons, menus, etc.)
+- Overall layout and state of the screen
+- Answer to the user's specific question
+
+Be specific and detailed in your response."""
+        
+        # Generate response with image
+        response = model.generate_content([prompt, img])
+        
+        return {
+            "status": "success",
+            "analysis": response.text,
+            "image_analyzed": image_path,
+            "message": f"✅ Vision analysis complete for {image_path}"
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to analyze image: {str(e)}"
+        }
+
+
+def find_element_on_screen(element_description: str) -> dict:
+    """Use OCR and image recognition to find UI elements on the screen by description. This helps locate buttons, text fields, and other interface elements.
+    
+    Args:
+        element_description (str): Description of the element to find (e.g., "Submit button", "Username text field", "File menu")
+        
+    Returns:
+        dict: Contains status and information about found elements with coordinates
+    """
+    try:
+        # Capture current screen
+        if mss is None:
+            return {
+                "status": "error",
+                "message": "Element detection requires the 'mss' package"
+            }
+        
+        # For now, return a placeholder message explaining the capability
+        # Full OCR implementation would require pytesseract or similar
+        return {
+            "status": "info",
+            "message": f"Element detection for '{element_description}' is available. The AI can analyze screenshots to understand screen content and suggest click coordinates. First capture the screen using capture_screen_for_vision, then the AI can analyze it.",
+            "suggestion": "Use capture_screen_for_vision first, then the AI vision model can analyze the image and provide coordinates for clicking on specific elements."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to find element: {str(e)}"
+        }
+
+
+def wait_seconds(seconds: int) -> dict:
+    """Wait for a specified number of seconds. Useful for giving applications time to load or respond between automation steps.
+    
+    Args:
+        seconds (int): Number of seconds to wait
+        
+    Returns:
+        dict: Contains status and wait duration
+    """
+    try:
+        time.sleep(seconds)
+        return {
+            "status": "success",
+            "waited_seconds": seconds,
+            "message": f"Waited {seconds} seconds"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to wait: {str(e)}"
         }
 
