@@ -16,7 +16,7 @@ AUTHORIZED_CHAT_IDS = [
 ]
 
 # Agent Configuration
-AGENT_MODEL = "gemini-2.0-flash"  # Gemini model to use
+AGENT_MODEL = "gemini-2.5-pro"  # Gemini model to use
 AGENT_NAME = "telegram_system_agent"
 
 # Security Settings

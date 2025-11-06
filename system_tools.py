@@ -789,3 +789,373 @@ def list_files_in_directory(directory_path: str) -> dict:
             "status": "error",
             "message": f"Failed to list directory: {str(e)}"
         }
+
+
+def open_application(application_name: str, file_path: Optional[str] = None) -> dict:
+    """Open an application installed on the PC. Can also open a file with a specific application.
+    
+    Args:
+        application_name (str): Name or path of the application to open (e.g., 'notepad', 'chrome', 'code', or full path)
+        file_path (str, optional): Path to a file to open with the application
+        
+    Returns:
+        dict: Contains status and application info
+        
+    Examples:
+        - open_application('notepad') - Opens Notepad
+        - open_application('chrome') - Opens Chrome browser
+        - open_application('notepad', 'C:/file.txt') - Opens file.txt in Notepad
+        - open_application('C:/Program Files/App/app.exe') - Opens app using full path
+    """
+    try:
+        if file_path:
+            # Open application with a specific file
+            if os.path.exists(file_path):
+                subprocess.Popen([application_name, file_path])
+                return {
+                    "status": "success",
+                    "application": application_name,
+                    "file_opened": file_path,
+                    "message": f"Opened {file_path} with {application_name}"
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": f"File not found: {file_path}"
+                }
+        else:
+            # Just open the application
+            subprocess.Popen(application_name, shell=True)
+            return {
+                "status": "success",
+                "application": application_name,
+                "message": f"Successfully opened {application_name}"
+            }
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "message": f"Application not found: {application_name}. Make sure it's in your PATH or provide the full path."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to open application: {str(e)}"
+        }
+
+
+def type_text(text: str, interval: float = 0.1) -> dict:
+    """Type text into the currently focused application window.
+    
+    Args:
+        text (str): The text to type
+        interval (float): Delay between each character in seconds (default: 0.1)
+        
+    Returns:
+        dict: Contains status and typed text info
+    """
+    try:
+        pyautogui.write(text, interval=interval)
+        return {
+            "status": "success",
+            "text_typed": text,
+            "character_count": len(text),
+            "message": f"Successfully typed {len(text)} characters"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to type text: {str(e)}"
+        }
+
+
+def press_key(key: str, presses: int = 1, interval: float = 0.1) -> dict:
+    """Press a keyboard key or key combination in the active application.
+    
+    Args:
+        key (str): Key to press (e.g., 'enter', 'tab', 'ctrl', 'alt', 'space', 'backspace', 'delete', 'f1'-'f12', etc.)
+        presses (int): Number of times to press the key (default: 1)
+        interval (float): Delay between presses in seconds (default: 0.1)
+        
+    Returns:
+        dict: Contains status and key press info
+        
+    Examples:
+        - press_key('enter') - Press Enter once
+        - press_key('tab', 3) - Press Tab 3 times
+        - press_key('f5') - Press F5 key
+    """
+    try:
+        pyautogui.press(key, presses=presses, interval=interval)
+        return {
+            "status": "success",
+            "key": key,
+            "presses": presses,
+            "message": f"Successfully pressed '{key}' {presses} time(s)"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to press key: {str(e)}"
+        }
+
+
+def press_hotkey(*keys: str) -> dict:
+    """Press a keyboard shortcut/hotkey combination (e.g., Ctrl+C, Alt+Tab).
+    
+    Args:
+        *keys: Keys to press together (e.g., 'ctrl', 'c' for Ctrl+C)
+        
+    Returns:
+        dict: Contains status and hotkey info
+        
+    Examples:
+        - press_hotkey('ctrl', 'c') - Copy
+        - press_hotkey('ctrl', 'v') - Paste
+        - press_hotkey('ctrl', 's') - Save
+        - press_hotkey('alt', 'tab') - Switch window
+        - press_hotkey('ctrl', 'shift', 'esc') - Task Manager
+    """
+    try:
+        pyautogui.hotkey(*keys)
+        hotkey_combo = '+'.join(keys)
+        return {
+            "status": "success",
+            "hotkey": hotkey_combo,
+            "keys": list(keys),
+            "message": f"Successfully pressed hotkey: {hotkey_combo}"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to press hotkey: {str(e)}"
+        }
+
+
+def click_mouse(x: Optional[int] = None, y: Optional[int] = None, button: str = 'left', clicks: int = 1) -> dict:
+    """Click the mouse at a specific position or current position.
+    
+    Args:
+        x (int, optional): X coordinate to click. If None, clicks at current position
+        y (int, optional): Y coordinate to click. If None, clicks at current position
+        button (str): Mouse button to click - 'left', 'right', or 'middle' (default: 'left')
+        clicks (int): Number of clicks (default: 1, use 2 for double-click)
+        
+    Returns:
+        dict: Contains status and click info
+    """
+    try:
+        if x is not None and y is not None:
+            pyautogui.click(x=x, y=y, button=button, clicks=clicks)
+            position = f"({x}, {y})"
+        else:
+            pyautogui.click(button=button, clicks=clicks)
+            current_pos = pyautogui.position()
+            position = f"({current_pos.x}, {current_pos.y})"
+        
+        return {
+            "status": "success",
+            "button": button,
+            "clicks": clicks,
+            "position": position,
+            "message": f"Successfully clicked {button} button {clicks} time(s) at {position}"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to click mouse: {str(e)}"
+        }
+
+
+def move_mouse(x: int, y: int, duration: float = 0.5) -> dict:
+    """Move the mouse cursor to a specific position.
+    
+    Args:
+        x (int): X coordinate to move to
+        y (int): Y coordinate to move to
+        duration (float): Time in seconds for the movement (default: 0.5)
+        
+    Returns:
+        dict: Contains status and movement info
+    """
+    try:
+        pyautogui.moveTo(x, y, duration=duration)
+        return {
+            "status": "success",
+            "position": f"({x}, {y})",
+            "duration": duration,
+            "message": f"Successfully moved mouse to ({x}, {y})"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to move mouse: {str(e)}"
+        }
+
+
+def get_mouse_position() -> dict:
+    """Get the current position of the mouse cursor.
+    
+    Returns:
+        dict: Contains status and current mouse position
+    """
+    try:
+        position = pyautogui.position()
+        return {
+            "status": "success",
+            "x": position.x,
+            "y": position.y,
+            "position": f"({position.x}, {position.y})",
+            "message": f"Current mouse position: ({position.x}, {position.y})"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to get mouse position: {str(e)}"
+        }
+
+
+def get_screen_size() -> dict:
+    """Get the screen resolution/size.
+    
+    Returns:
+        dict: Contains status and screen dimensions
+    """
+    try:
+        size = pyautogui.size()
+        return {
+            "status": "success",
+            "width": size.width,
+            "height": size.height,
+            "resolution": f"{size.width}x{size.height}",
+            "message": f"Screen size: {size.width}x{size.height}"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to get screen size: {str(e)}"
+        }
+
+
+def scroll_mouse(clicks: int, direction: str = 'down') -> dict:
+    """Scroll the mouse wheel in the active window.
+    
+    Args:
+        clicks (int): Number of scroll clicks (positive number)
+        direction (str): Scroll direction - 'up' or 'down' (default: 'down')
+        
+    Returns:
+        dict: Contains status and scroll info
+    """
+    try:
+        scroll_amount = clicks if direction == 'up' else -clicks
+        pyautogui.scroll(scroll_amount)
+        return {
+            "status": "success",
+            "clicks": clicks,
+            "direction": direction,
+            "message": f"Successfully scrolled {direction} {clicks} clicks"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to scroll: {str(e)}"
+        }
+
+
+def close_application(process_name: str) -> dict:
+    """Close an application by its process name (Windows only).
+    
+    Args:
+        process_name (str): Name of the process to close (e.g., 'notepad.exe', 'chrome.exe')
+        
+    Returns:
+        dict: Contains status and closure info
+    """
+    try:
+        if os.name == 'nt':  # Windows
+            result = subprocess.run(['taskkill', '/F', '/IM', process_name], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                return {
+                    "status": "success",
+                    "process": process_name,
+                    "message": f"Successfully closed {process_name}"
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": f"Failed to close {process_name}: {result.stderr}"
+                }
+        else:
+            # Linux/Mac
+            result = subprocess.run(['pkill', '-f', process_name], 
+                                  capture_output=True, text=True)
+            return {
+                "status": "success",
+                "process": process_name,
+                "message": f"Attempted to close {process_name}"
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to close application: {str(e)}"
+        }
+
+
+def list_running_processes() -> dict:
+    """List all currently running processes on the system (Windows only).
+    
+    Returns:
+        dict: Contains status and list of running processes
+    """
+    try:
+        if os.name == 'nt':  # Windows
+            result = subprocess.run(['tasklist'], capture_output=True, text=True)
+            if result.returncode == 0:
+                processes = []
+                lines = result.stdout.split('\n')[3:]  # Skip header lines
+                for line in lines:
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            processes.append({
+                                "name": parts[0],
+                                "pid": parts[1]
+                            })
+                
+                return {
+                    "status": "success",
+                    "processes": processes[:50],  # Limit to first 50 to avoid huge output
+                    "total_count": len(processes),
+                    "message": f"Found {len(processes)} running processes (showing first 50)"
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "Failed to retrieve process list"
+                }
+        else:
+            # Linux/Mac
+            result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
+            processes = []
+            for line in result.stdout.split('\n')[1:]:  # Skip header
+                if line.strip():
+                    parts = line.split(None, 10)
+                    if len(parts) >= 11:
+                        processes.append({
+                            "name": parts[10],
+                            "pid": parts[1]
+                        })
+            
+            return {
+                "status": "success",
+                "processes": processes[:50],
+                "total_count": len(processes),
+                "message": f"Found {len(processes)} running processes (showing first 50)"
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to list processes: {str(e)}"
+        }
+

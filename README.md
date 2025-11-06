@@ -27,7 +27,24 @@ An intelligent Telegram bot powered by Google's ADK Agent (Gemini) that provides
 - Check file/directory existence
 - Get current working directory
 
-### 🔐 Security Operations
+### �️ Application Control (NEW!)
+- **Open any installed application** (Notepad, Chrome, VS Code, etc.)
+- **Close running applications** by process name
+- **List all running processes** on the system
+- Open files with specific applications
+- Monitor system activity
+
+### ⌨️ Keyboard & Mouse Automation (NEW!)
+- **Type text** into active windows
+- **Press keys** (Enter, Tab, F1-F12, etc.)
+- **Execute hotkeys** (Ctrl+C, Ctrl+V, Alt+Tab, etc.)
+- **Click mouse** at specific coordinates or current position
+- **Move mouse cursor** to any position
+- **Scroll** up and down in windows
+- **Get mouse position** and screen size
+- Automate complex workflows
+
+### �🔐 Security Operations
 - File encryption (ransomware-like functionality for testing)
 - File decryption
 - Secure file handling
@@ -181,6 +198,36 @@ pythonw main.pyw
 ```
 "Take a screenshot"
 "Record my screen for 15 seconds"
+```
+
+**Application Control:**
+```
+"Open Notepad"
+"Launch Google Chrome"
+"Open VS Code with C:\project\main.py"
+"Close chrome.exe"
+"What applications are running?"
+"List all processes"
+```
+
+**Keyboard & Mouse Automation:**
+```
+"Type 'Hello World' in the active window"
+"Press Enter"
+"Press Ctrl+S to save"
+"Click at position 500, 300"
+"Move mouse to 800, 600"
+"Scroll down 5 times"
+"Where is my cursor?"
+"What's my screen resolution?"
+```
+
+**Complex Automation Examples:**
+```
+"Open Notepad, type 'Meeting Notes', press Enter twice"
+"Launch calculator and type 5+5"
+"Open Chrome, type 'github.com', and press Enter"
+"Take a screenshot, open Paint, and paste it"
 ```
 
 ## 🏗️ Project Structure

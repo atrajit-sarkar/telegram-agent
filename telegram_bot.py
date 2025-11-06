@@ -3,6 +3,8 @@ import os
 import time
 import json
 import asyncio
+import signal
+import sys
 from requests.exceptions import ConnectionError
 from pathlib import Path
 import agent
@@ -375,10 +377,40 @@ def handle_document(message):
         bot.reply_to(message, f"❌ Failed to upload file: {str(e)}")
 
 
+# Global flag for graceful shutdown
+shutdown_flag = False
+
+def signal_handler(sig, frame):
+    """Handle shutdown signals (Ctrl+C, SIGTERM, etc.)"""
+    global shutdown_flag
+    shutdown_flag = True
+    print("\n\n🛑 Shutdown signal received...")
+    
+    # Notify authorized users that bot is going offline
+    for admin_id in AUTHORIZED_CHAT_IDS:
+        if admin_id:
+            try:
+                bot.send_message(admin_id, "🔴 *System Agent Bot is going Offline*", parse_mode='Markdown')
+            except:
+                pass
+    
+    print("✅ Bot stopped successfully")
+    sys.exit(0)
+
+
 def start_bot():
     """Start the bot with error handling and auto-restart."""
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
+    if hasattr(signal, 'SIGBREAK'):
+        signal.signal(signal.SIGBREAK, signal_handler)  # Windows Ctrl+Break
+    
     print("🤖 Telegram System Agent Bot Started...")
     print(f"📂 Working Directory: {os.getcwd()}")
+    print("💡 Press Ctrl+C to stop the bot")
+    print()
     
     # Notify authorized users that bot is online
     for admin_id in AUTHORIZED_CHAT_IDS:
@@ -391,6 +423,17 @@ def start_bot():
     while True:
         try:
             bot.polling(none_stop=True, interval=0, timeout=60)
+        except KeyboardInterrupt:
+            print("\n\n🛑 Stopping bot...")
+            # Notify authorized users that bot is going offline
+            for admin_id in AUTHORIZED_CHAT_IDS:
+                if admin_id:
+                    try:
+                        bot.send_message(admin_id, "🔴 *System Agent Bot is going Offline*", parse_mode='Markdown')
+                    except:
+                        pass
+            print("✅ Bot stopped successfully")
+            break
         except ConnectionError as e:
             print(f"⚠️ Connection error: {e}. Retrying in 5 seconds...")
             time.sleep(5)
