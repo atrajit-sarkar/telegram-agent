@@ -58,7 +58,7 @@ def chdir(directory: str) -> dict:
         }
 
 
-def list_directory(directory: Optional[str]) -> dict:
+def list_directory(directory: Optional[str] = None) -> dict:
     """List all files and folders in the specified directory.
     
     Args:
@@ -120,7 +120,7 @@ def read_file(file_path: str) -> dict:
         }
 
 
-def create_file(file_path: str, content: Optional[str]) -> dict:
+def create_file(file_path: str, content: Optional[str] = None) -> dict:
     """Create a new file with specified content.
     
     Args:
@@ -370,7 +370,7 @@ def change_file_permissions(file_path: str, mode: str) -> dict:
         }
 
 
-def encrypt_files(directory: Optional[str]) -> dict:
+def encrypt_files(directory: Optional[str] = None) -> dict:
     """Encrypt all files in the specified directory (excluding encryption key and script).
     
     Args:
@@ -424,7 +424,7 @@ def encrypt_files(directory: Optional[str]) -> dict:
         }
 
 
-def decrypt_files(directory: Optional[str]) -> dict:
+def decrypt_files(directory: Optional[str] = None) -> dict:
     """Decrypt all encrypted files in the specified directory.
     
     Args:
@@ -473,7 +473,7 @@ def decrypt_files(directory: Optional[str]) -> dict:
         }
 
 
-def capture_screenshot(save_path: Optional[str]) -> dict:
+def capture_screenshot(save_path: Optional[str] = None) -> dict:
     """Capture a screenshot of the current screen.
     
     Args:
